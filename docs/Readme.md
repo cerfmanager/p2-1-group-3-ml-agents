@@ -1,7 +1,7 @@
 # Unity ML-Agents P1-2 — Intelligent Agents in 3D Environments
 
 ## Research Questions
-
+How accurately can the training performance of an agent training run be predicted from its hyperparameters, algorithm and environment?
 ---
 
 ## Overview
