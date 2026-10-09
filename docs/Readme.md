@@ -1,66 +1,81 @@
-# Unity ML-Agents P1-2
+# Unity ML-Agents P1-2 — Intelligent Agents in 3D Environments
 
+## Research Questions
+How accurately can the training performance of an agent training run be predicted from its hyperparameters, algorithm and environment?
 
-TODO: modify the read me to something for our project
+---
 
+## Overview
+This repository contains our work for Project 2.1 – AI and Machine Learning at Maastricht University.
+Our goal is to apply Machine Learning (ML) techniques to data collected from Unity ML‑Agents, training intelligent agents in 3D real‑time simulations and analyzing their performance using supervised and unsupervised ML methods. 
 
+---
 
+## Project Objectives
+1. Collect data from Unity ML‑Agents training runs.  
+2. Analyze and model relationships between training parameters and outcomes (e.g., performance, duration, resource usage).  
+3. Build a clean, well‑documented, reproducible pipeline for data collection and ML analysis.  
+4. Maintain a public GitHub repository that demonstrates professional version control and documentation practices.
 
-## Releases & Documentation
+---
 
-**Our latest, stable release is `Release 21`. Click
-[here](Getting-Started.md)
-to get started with the latest release of ML-Agents.**
+## Dungeon Escape Environment
+Dungeon Escape is a multi-agent POCA-based Unity environment where agents must navigate a maze, avoid obstacles, and reach a goal.
+It provides a controlled setting for studying how hyperparameters influence learning speed, stability, and final performance.
 
-**You can also check out our new [web docs](https://unity-technologies.github.io/ml-agents/)!**
+---
 
+## Setup Instructions
+### Requirements
+- **Unity (2022.x or later)** — with ML‑Agents package installed  
+- **Python 3.10.x** — recommended version 3.10.11  
+- **Virtual environment** for Python dependencies  
+- **Git** for version control
 
+---
 
-If you are a researcher interested in a discussion of Unity as an AI platform,
-see a pre-print of our
-[reference paper on Unity and the ML-Agents Toolkit](https://arxiv.org/abs/1809.02627).
+### Installation
+1. Clone this repository:
+` git clone https://github.com/<cerfmanager>/p2‑1‑group‑3‑ml‑agents.git `
 
-If you use Unity or the ML-Agents Toolkit to conduct research, we ask that you
-cite the following paper as a reference:
-
+2. Set up the Python environment:
 ```
-@article{juliani2020,
-  title={Unity: A general platform for intelligent agents},
-  author={Juliani, Arthur and Berges, Vincent-Pierre and Teng, Ervin and Cohen, Andrew and Harper, Jonathan and Elion, Chris and Goy, Chris and Gao, Yuan and Henry, Hunter and Mattar, Marwan and Lange, Danny},
-  journal={arXiv preprint arXiv:1809.02627},
-  url={https://arxiv.org/pdf/1809.02627.pdf},
-  year={2020}
-}
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-Additionally, if you use the MA-POCA trainer in your research, we ask that you
-cite the following paper as a reference:
+---
+   
+## Data Collection & ML Analysis
+We collect data from training runs, including:
+- hyperparameters (learning rate, batch size, buffer size, etc.)
+- environment configuration (Dungeon Escape settings)
+- performance metrics (reward curves, steps to threshold, training duration)
+- hardware information (RAM, CPU, etc.)
+Using this data, we train ML models to predict:
+- training duration
+- memory usage
+- reward progression
+- steps required to reach a predefined reward threshold
 
-```
-@article{cohen2022,
-  title={On the Use and Misuse of Absorbing States in Multi-agent Reinforcement Learning},
-  author={Cohen, Andrew and Teng, Ervin and Berges, Vincent-Pierre and Dong, Ruo-Ping and Henry, Hunter and Mattar, Marwan and Zook, Alexander and Ganguly, Sujoy},
-  journal={RL in Games Workshop AAAI 2022},
-  url={http://aaai-rlg.mlanctot.info/papers/AAAI22-RLG_paper_32.pdf},
-  year={2022}
-}
-```
+This work is inspired by literature on hyperparameter sensitivity, performance prediction, and surrogate modeling in DRL.
 
+---
 
+## Contributors
+- Gabriela Linkova
+- Alexandre Kozlowski
+- Simona Dilovska
+- Himaya Gunasekara
+- Constantinos Lambrides
+- Odhran O'reilly
+- Matteo Ranieri
 
-## Additional Resources
+---
 
-We have a Unity Learn course,
-[ML-Agents: Hummingbirds](https://learn.unity.com/course/ml-agents-hummingbirds),
-that provides a gentle introduction to Unity and the ML-Agents Toolkit.
-
-We've also partnered with
-[CodeMonkeyUnity](https://www.youtube.com/c/CodeMonkeyUnity) to create a
-[series of tutorial videos](https://www.youtube.com/playlist?list=PLzDRvYVwl53vehwiN_odYJkPBzcqFw110)
-on how to implement and use the ML-Agents Toolkit.
-
-
-### More from Unity
-
-- [Unity Sentis](https://unity.com/products/sentis)
-- [Introducing Unity Muse and Sentis](https://blog.unity.com/engine-platform/introducing-unity-muse-and-unity-sentis-ai)
+## References 
+- Juliani et al. (2020). Unity: A general platform for intelligent agents. arXiv:1809.02627.
+- Dierkes et al. (2025). Predicting Reinforcement Learning Performance.
+- Parker-Holder et al. (2022). AutoRL: Automated Reinforcement Learning.
+ 
