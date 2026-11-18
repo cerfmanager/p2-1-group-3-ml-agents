@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.dashboardui.controller.DashboardController">
+
+    <top>
+        <VBox spacing="10">
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+
+            <Label text="ML Agents Experiment Dashboard"
+                   style="-fx-font-size: 24px; -fx-font-weight: bold;" />
+
+            <HBox spacing="15">
+
+                <Label text="Server Status:"/>
+
+                <Label fx:id="serverStatusLabel"
+                       text="ONLINE"
+                       style="-fx-text-fill: green;" />
+
+            </HBox>
+
+        </VBox>
+    </top>
+
+    <left>
+
+        <VBox spacing="15">
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+
+            <TitledPane text="Current Parameter" expanded="true">
+
+                <VBox spacing="8">
+
+                    <Label text="Parameter:"/>
+                    <Label fx:id="currentParameterLabel"
+                           text="beta"/>
+
+                    <Separator/>
+
+                    <Label text="Progress"/>
+                    <ProgressBar fx:id="parameterProgressBar"
+                                 progress="0.5"/>
+
+                    <Label fx:id="progressLabel"
+                           text="15 / 33 completed"/>
+
+                </VBox>
+
+            </TitledPane>
+
+            <TitledPane text="Statistics" expanded="true">
+
+                <VBox spacing="8">
+
+                    <Label fx:id="completedRunsLabel"
+                           text="Completed: 12"/>
+
+                    <Label fx:id="runningRunsLabel"
+                           text="Running: 3"/>
+
+                    <Label fx:id="assignedRunsLabel"
+                           text="Assigned: 4"/>
+
+                    <Label fx:id="pendingRunsLabel"
+                           text="Pending: 14"/>
+
+                </VBox>
+
+            </TitledPane>
+
+        </VBox>
+
+    </left>
+
+    <center>
+
+        <VBox spacing="10">
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+
+            <Label text="Runs"/>
+
+            <TableView fx:id="runsTable">
+
+                <columns>
+
+                    <TableColumn fx:id="runIdColumn"
+                                 text="Run ID"
+                                 prefWidth="180"/>
+
+                    <TableColumn fx:id="parameterColumn"
+                                 text="Parameter"
+                                 prefWidth="100"/>
+
+                    <TableColumn fx:id="valueColumn"
+                                 text="Value"
+                                 prefWidth="100"/>
+
+                    <TableColumn fx:id="repetitionColumn"
+                                 text="Rep"
+                                 prefWidth="70"/>
+
+                    <TableColumn fx:id="statusColumn"
+                                 text="Status"
+                                 prefWidth="120"/>
+
+                    <TableColumn fx:id="machineColumn"
+                                 text="Machine"
+                                 prefWidth="120"/>
+
+                </columns>
+
+            </TableView>
+
+        </VBox>
+
+    </center>
+
+    <right>
+
+        <VBox spacing="15">
+
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+
+            <TitledPane text="Current Value Progress"
+                        expanded="true">
+
+                <ListView fx:id="valueProgressList"
+                          prefHeight="300"/>
+
+            </TitledPane>
+
+        </VBox>
+
+    </right>
+
+    <bottom>
+
+        <HBox spacing="10">
+
+            <padding>
+                <Insets top="10" right="15" bottom="15" left="15"/>
+            </padding>
+
+            <Button fx:id="refreshButton"
+                    text="Refresh"/>
+
+        </HBox>
+
+    </bottom>
+
+</BorderPane>
