@@ -52,9 +52,9 @@ class CsvRecorder:
                      for total, count in zip(self.totals, self.counts)]
             self.writer.writerow((
                 self.epochs, means[0], means[1], self.hyperparameters.beta,
-                round(self.clock() - self.started, 6),
                 self.hyperparameters.epsilon, self.hyperparameters.lambd,
                 self.reward_settings.strength, self.reward_settings.gamma,
+                round(self.clock() - self.started, 6)
             ))
             self.file.flush()
             self.totals = [0.0, 0.0]
