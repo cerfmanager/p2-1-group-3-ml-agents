@@ -1,0 +1,13 @@
+[
+  {
+    "run_id": "baseline_rep01",
+    "config_id": "baseline",
+    "hyperparameter": null,
+    "value": null,
+    "parameters": {},
+    "repetition": 1,
+    "yaml_file": "yamls/DungeonEscape_beta_0.005.yaml",
+    "status": "assigned",
+    "machine_id": "simona-mac"
+  }
+]
