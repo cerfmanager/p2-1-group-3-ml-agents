@@ -18,10 +18,10 @@
 
             <HBox spacing="15">
 
-                <Label text="Server Status:"/>
+                <Label text="Last Refresh:"/>
 
-                <Label fx:id="serverStatusLabel"
-                       text="ONLINE"
+                <Label fx:id="lastRefreshLabel"
+                       text="Never"
                        style="-fx-text-fill: green;" />
 
             </HBox>
@@ -155,7 +155,8 @@
             </padding>
 
             <Button fx:id="refreshButton"
-                    text="Refresh"/>
+                    text="Refresh"
+                    onAction="#refreshData"/>
 
         </HBox>
 
