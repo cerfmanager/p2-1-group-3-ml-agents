@@ -5,11 +5,8 @@ CREATE TABLE IF NOT EXISTS pending_runs(
     config_id TEXT NOT NULL,
     machine_id TEXT,
     repetition INTEGER NOT NULL,
-    beta REAL NOT NULL,
-    epsilon REAL NOT NULL,
-    lambd REAL NOT NULL,
-    strength REAL NOT NULL,
-    gamma REAL NOT NULL
+    hyperparameter TEXT NOT NULL,
+    value REAL NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS running_runs(
@@ -17,11 +14,8 @@ CREATE TABLE IF NOT EXISTS running_runs(
     config_id TEXT NOT NULL,
     machine_id TEXT,
     repetition INTEGER NOT NULL,
-    beta REAL NOT NULL,
-    epsilon REAL NOT NULL,
-    lambd REAL NOT NULL,
-    strength REAL NOT NULL,
-    gamma REAL NOT NULL,
+    hyperparameter TEXT NOT NULL,
+    value REAL NOT NULL,
     started_at TEXT
 );
 
@@ -30,11 +24,8 @@ CREATE TABLE IF NOT EXISTS completed_runs(
     config_id TEXT NOT NULL,
     machine_id TEXT,
     repetition INTEGER NOT NULL,
-    beta REAL NOT NULL,
-    epsilon REAL NOT NULL,
-    lambd REAL NOT NULL,
-    strength REAL NOT NULL,
-    gamma REAL NOT NULL,
+    hyperparameter TEXT NOT NULL,
+    value REAL NOT NULL,
     started_at TEXT,
     completed_at TEXT
 );
@@ -44,30 +35,27 @@ CREATE TABLE IF NOT EXISTS failed_runs(
     config_id TEXT NOT NULL,
     machine_id TEXT,
     repetition INTEGER NOT NULL,
-    beta REAL NOT NULL,
-    epsilon REAL NOT NULL,
-    lambd REAL NOT NULL,
-    strength REAL NOT NULL,
-    gamma REAL NOT NULL,
+    hyperparameter TEXT NOT NULL,
+    value REAL NOT NULL,
     started_at TEXT,
     failed_at TEXT
 );
 
 CREATE VIEW all_runs AS SELECT
-    run_id, config_id, machine_id, repetition, beta, epsilon, lambd, strength, gamma, 'pending' AS status
+    run_id, config_id, machine_id, repetition, hyperparameter, value,'pending' AS status
 FROM pending_runs
 
 UNION ALL
 SELECT
-    run_id, config_id, machine_id, repetition, beta, epsilon, lambd, strength, gamma, 'running' AS status
+    run_id, config_id, machine_id, repetition,hyperparameter,value, 'running' AS status
 FROM running_runs
 UNION ALL
 SELECT
-    run_id, config_id, machine_id, repetition, beta, epsilon, lambd, strength, gamma, 'completed' AS status
+    run_id, config_id, machine_id, repetition,hyperparameter,value, 'completed' AS status
 FROM completed_runs
 UNION ALL
 SELECT
-    run_id, config_id, machine_id, repetition, beta, epsilon, lambd, strength, gamma, 'failed' AS status
+    run_id, config_id, machine_id, repetition,hyperparameter,value, 'failed' AS status
 FROM failed_runs;
-    
+
 

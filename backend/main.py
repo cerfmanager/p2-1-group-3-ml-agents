@@ -18,7 +18,7 @@ logging.basicConfig(filename="serv.log", level=logging.INFO)
 logger.info("Logging started")
 
 
-db_connection = None
+db_connection: sql.Connection|None = None
 cursor: sql.Cursor|None = None
 
 from fastapi import FastAPI, HTTPException
@@ -64,7 +64,7 @@ async def lifespan(app: FastAPI):
             with open(SCHEMA_NAME) as f:
                 cursor.executescript(f.read())
         logger.info("Connected to database")
-        #implement this
+        #TODO implement this
         #scheduler.populatedb(cursor)
     except sql.OperationalError:
         logger.exception("Failed to connect to database")
@@ -112,6 +112,10 @@ async def complete_run(run: RunResponse):
     path =  os.path.join(UPLOAD_DIR, f"{run.run_id}.csv")
     with open(path, "w", encoding="utf-8", newline="") as f:
         f.write(run.result)
+
+    await move_to_table_by_run_id(run.run_id,"running_runs","completed_runs")
+
+    return {"OK":""}
 
 
 
