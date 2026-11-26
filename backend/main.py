@@ -1,10 +1,28 @@
 import json
 import os
+import logging
+import sqlite3 as sql
+from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+
+DATABASE_NAME = "database/runs.db"
+SCHEMA_NAME = "database/squema.sql"
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename="serv.log", level=logging.INFO)
+logger.info("Logging started")
+
+
+db_connection = None
+cursor: sql.Cursor|None = None
+
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+
 
 
 HEARTBEAT_TIMEOUT = timedelta(seconds=60)
@@ -14,12 +32,62 @@ RUN_TRANSITIONS = {
     "run.failed": ("running", "failed"),
 }
 
+@dataclass
+class RunState:
+    run_id: str
+    config_id: str
+    hyperparameter: str|None
+    value: float|None
+    repetitions: int
+    status: str = "pending"
+    machine_id: str = None
+
+@dataclass
+class RunResponse:
+    run_id: str
+    status: str
+    #this is an ENTIRE csv
+    result: str
+
+
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global db_connection, cursor
+    logger.info("Starting server")
+    try:
+        is_new = not os.path.exists(DATABASE_NAME)
+        db_connection = sql.connect(DATABASE_NAME)
+        cursor = db_connection.cursor()
+        if is_new:
+            with open(SCHEMA_NAME) as f:
+                cursor.executescript(f.read())
+        logger.info("Connected to database")
+        #implement this
+        #scheduler.populatedb(cursor)
+    except sql.OperationalError:
+        logger.exception("Failed to connect to database")
+
+    yield
+
+    if cursor is not None:
+        cursor.close()
+    if db_connection is not None:
+        db_connection.close()
+    logger.info("Disconnected from database")
+    logger.info("Stopping server")
 
 app = FastAPI(
     title="Communication Server",
     description="Central HTTP server for managing training runs",
     version="0.1.0",
+    lifespan=lifespan,
 )
+
+
+
+
 
 
 @app.get("/health")
@@ -27,135 +95,70 @@ def health_check():
     return {"status": "ok"}
 
 
-class WorkerRegistration(BaseModel):
-    machine_id: str
+
+@app.get("/get_run/{machine_id}",response_model=RunState)
+async def get_run(machine_id: str):
+
+    run_state =  await get_top_run_set_machine_id(machine_id)
+
+    await move_to_table_by_run_id(run_state.run_id,"pending","running")
 
 
-workers = {}
-
-runs_file = os.environ.get("TRAINING_RUNS_FILE", Path(__file__).with_name("test_runs.json"))
-
-with open(runs_file, "r", encoding="utf-8") as file:
-    runs = json.load(file)
+    return run_state
 
 
-def worker_activity(machine_id: str) -> str:
-    if any(run["machine_id"] == machine_id and run["status"] == "running" for run in runs):
-        return "busy"
-    return "available"
+@app.post("/complete_run/")
+async def complete_run(run: RunResponse):
+    path =  os.path.join(UPLOAD_DIR, f"{run.run_id}.csv")
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        f.write(run.result)
 
 
-@app.post("/workers/register")
-async def register_worker(worker: WorkerRegistration):
-    workers[worker.machine_id] = {
-        "status": worker_activity(worker.machine_id),
-        "last_seen": datetime.now(timezone.utc)
-    }
-    return {
-        "machine_id": worker.machine_id,
-        "status": "registered"
-    }
 
 
-class TrainingEvent(BaseModel):
-    event: str
-    run_id: str
-    machine_id: str
 
 
-@app.get("/workers")
-async def get_workers():
-    now = datetime.now(timezone.utc)
 
-    for worker in workers.values():
-        if now - worker["last_seen"] > HEARTBEAT_TIMEOUT:
-            worker["status"] = "offline"
-
-    return workers
-
-
-@app.post("/workers/{machine_id}/heartbeat")
-async def worker_heartbeat(machine_id: str):
-    if machine_id not in workers:
-        raise HTTPException(
-            status_code=404,
-            detail="Worker not registered"
-        )
-
-    worker = workers[machine_id]
-    worker["last_seen"] = datetime.now(timezone.utc)
-
-    worker["status"] = worker_activity(machine_id)
-
-    return {
-        "machine_id": machine_id,
-        "status": worker["status"]
-    }
-
-@app.get("/workers/{machine_id}/runs")
-async def get_assigned_runs(machine_id: str):
-    if machine_id not in workers:
-        raise HTTPException(
-            status_code=404,
-            detail="Worker not registered"
-        )
-
-    assigned_runs = [
-        run for run in runs
-        if run["machine_id"] == machine_id
-        and run["status"] == "assigned"
-    ]
-
-    return assigned_runs
-
-
-@app.post("/webhooks/training-events")
-async def receive_training_event(event: TrainingEvent):
-    transition = RUN_TRANSITIONS.get(event.event)
-    if transition is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Unsupported event type"
-        )
-
-    if event.machine_id not in workers:
-        raise HTTPException(
-            status_code=404,
-            detail="Worker not registered"
-        )
-
-    run = next(
-        (run for run in runs if run["run_id"] == event.run_id),
-        None
+async def get_top_run_set_machine_id(machine_id: str):
+    cursor.execute("""
+    SELECT * FROM pending ORDER BY run_id LIMIT 1;
+    """)
+    row = cursor.fetchone()
+    if row is None:
+        raise HTTPException(404, "No pending runs")
+    run = RunState(
+        run_id=row[0],
+        config_id=row[1],
+        hyperparameter=row[2],
+        value=row[3],
+        repetitions=row[4],
+        status=row[5],
+        machine_id=machine_id,
     )
 
-    if run is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Run not found"
-        )
+    ## update the field
+    cursor.execute("""
+    UPDATE pending SET machine_id=? WHERE run_id=?
+    """, [machine_id, run.run_id])
+    db_connection.commit()
 
-    if run["machine_id"] != event.machine_id:
-        raise HTTPException(
-            status_code=403,
-            detail="Run assigned to a different worker"
-        )
+    return run
 
-    required_status, next_status = transition
-    if run["status"] != required_status:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Run is not in {required_status} state"
-        )
 
-    run["status"] = next_status
-    worker = workers[event.machine_id]
-    if datetime.now(timezone.utc) - worker["last_seen"] > HEARTBEAT_TIMEOUT:
-        worker["status"] = "offline"
-    else:
-        worker["status"] = worker_activity(event.machine_id)
+async def move_to_table_by_run_id(run_id,from_table,to_table):
+    #get the row how it currently is
+    cursor.execute(f"""
+    SELECT * FROM {from_table} WHERE run_id=?;
+    """,(run_id,))
+    row = cursor.fetchone()
 
-    return {
-        "run_id": event.run_id,
-        "status": next_status
-    }
+    #add it to the other table
+    cursor.execute(f"""
+    INSERT INTO {to_table} (run_id, config_id, hyperparameters,value,repetitions,status,machine_id) VALUES (?,?,?,?,?,?,?);
+    """,(row[0],row[1],row[2],row[3],row[4],to_table,row[6]))
+
+    #remove it from the first tablw
+    cursor.execute(f"""
+    DELETE FROM {from_table} WHERE run_id=?;
+    """,(run_id,))
+    db_connection.commit()
