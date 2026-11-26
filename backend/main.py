@@ -107,6 +107,12 @@ async def get_run(machine_id: str):
 
     await move_to_table_by_run_id(run_state.run_id,"pending_runs","running_runs")
 
+    cursor.execute("""
+                   UPDATE running_runs
+                   SET started_at=?
+                   WHERE run_id = ?
+                   """, (datetime.now(timezone.utc).isoformat(), run_state.run_id))
+    db_connection.commit()
 
     return run_state
 
@@ -119,15 +125,18 @@ async def complete_run(run: RunResponse):
 
     cursor.execute("""
     SELECT started_at from running_runs WHERE run_id = ?
-    """)
-    start_time = cursor.fetchone()[0]
+    """, run.run_id)
+    row = cursor.fetchone()
+    if row is None:
+        raise HTTPException(404, f"Run {run.run_id} is not running")
+    start_time = row[0]
 
-    time = datetime.now()
+    time = datetime.now().isoformat()
 
     await move_to_table_by_run_id(run.run_id,"running_runs","completed_runs")
 
     cursor.execute("""
-                   UPDATE pending
+                   UPDATE completed_runs
                    SET
                        started_at=?
                        completed_at=?
@@ -155,7 +164,7 @@ async def get_top_run_set_machine_id(machine_id: str):
     run = RunState(
         run_id=row[0],
         config_id=row[1],
-        machine_id=row[2],
+        machine_id=machine_id,
         repetitions=row[5],
         hyperparameter=row[3],
         value=row[4],
@@ -165,8 +174,8 @@ async def get_top_run_set_machine_id(machine_id: str):
 
     ## update the field
     cursor.execute("""
-    UPDATE pending SET machine_id=?,started_at=? WHERE run_id=?
-    """, (machine_id,time, run.run_id))
+    UPDATE pending_runs SET machine_id=?,started_at=? WHERE run_id=?
+    """, (machine_id, run.run_id))
     db_connection.commit()
 
     return run
