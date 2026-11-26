@@ -18,6 +18,7 @@ logging.basicConfig(filename="serv.log", level=logging.INFO)
 logger.info("Logging started")
 
 
+
 db_connection: sql.Connection|None = None
 cursor: sql.Cursor|None = None
 
@@ -36,11 +37,12 @@ RUN_TRANSITIONS = {
 class RunState:
     run_id: str
     config_id: str
+    machine_id: str
     hyperparameter: str|None
     value: float|None
     repetitions: int
     status: str = "pending"
-    machine_id: str = None
+
 
 @dataclass
 class RunResponse:
@@ -101,7 +103,9 @@ async def get_run(machine_id: str):
 
     run_state =  await get_top_run_set_machine_id(machine_id)
 
-    await move_to_table_by_run_id(run_state.run_id,"pending","running")
+    logger.info(f"{machine_id} got run {run_state.run_id}")
+
+    await move_to_table_by_run_id(run_state.run_id,"pending_runs","running_runs")
 
 
     return run_state
@@ -113,7 +117,25 @@ async def complete_run(run: RunResponse):
     with open(path, "w", encoding="utf-8", newline="") as f:
         f.write(run.result)
 
+    cursor.execute("""
+    SELECT started_at from running_runs WHERE run_id = ?
+    """)
+    start_time = cursor.fetchone()[0]
+
+    time = datetime.now()
+
     await move_to_table_by_run_id(run.run_id,"running_runs","completed_runs")
+
+    cursor.execute("""
+                   UPDATE pending
+                   SET
+                       started_at=?
+                       completed_at=?
+                   WHERE run_id = ?
+                   """, ( start_time,time, run.run_id))
+    db_connection.commit()
+
+    logger.info(f"{run.run_id} completed !")
 
     return {"OK":""}
 
@@ -133,17 +155,18 @@ async def get_top_run_set_machine_id(machine_id: str):
     run = RunState(
         run_id=row[0],
         config_id=row[1],
-        hyperparameter=row[2],
-        value=row[3],
-        repetitions=row[4],
-        status=row[5],
-        machine_id=machine_id,
+        machine_id=row[2],
+        repetitions=row[5],
+        hyperparameter=row[3],
+        value=row[4],
     )
+
+    time = datetime.now()
 
     ## update the field
     cursor.execute("""
-    UPDATE pending SET machine_id=? WHERE run_id=?
-    """, [machine_id, run.run_id])
+    UPDATE pending SET machine_id=?,started_at=? WHERE run_id=?
+    """, (machine_id,time, run.run_id))
     db_connection.commit()
 
     return run
@@ -158,10 +181,10 @@ async def move_to_table_by_run_id(run_id,from_table,to_table):
 
     #add it to the other table
     cursor.execute(f"""
-    INSERT INTO {to_table} (run_id, config_id, hyperparameters,value,repetitions,status,machine_id) VALUES (?,?,?,?,?,?,?);
-    """,(row[0],row[1],row[2],row[3],row[4],to_table,row[6]))
+    INSERT INTO {to_table} (run_id, config_id, machine_id,repetition,hyperparameter,value) VALUES (?,?,?,?,?,?);
+    """,(row[0],row[1],row[2],row[3],row[4],row[5]))
 
-    #remove it from the first tablw
+    #remove it from the first table
     cursor.execute(f"""
     DELETE FROM {from_table} WHERE run_id=?;
     """,(run_id,))
