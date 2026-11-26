@@ -109,7 +109,7 @@ async def get_run(machine_id: str):
 
     cursor.execute("""
                    UPDATE running_runs
-                   SET started_at=?
+                   SET machine_id = ?
                    WHERE run_id = ?
                    """, (datetime.now(timezone.utc).isoformat(), run_state.run_id))
     db_connection.commit()
@@ -125,7 +125,7 @@ async def complete_run(run: RunResponse):
 
     cursor.execute("""
     SELECT started_at from running_runs WHERE run_id = ?
-    """, run.run_id)
+    """, (run.run_id))
     row = cursor.fetchone()
     if row is None:
         raise HTTPException(404, f"Run {run.run_id} is not running")
@@ -138,7 +138,7 @@ async def complete_run(run: RunResponse):
     cursor.execute("""
                    UPDATE completed_runs
                    SET
-                       started_at=?
+                       started_at=?,
                        completed_at=?
                    WHERE run_id = ?
                    """, ( start_time,time, run.run_id))
@@ -156,7 +156,7 @@ async def complete_run(run: RunResponse):
 
 async def get_top_run_set_machine_id(machine_id: str):
     cursor.execute("""
-    SELECT * FROM pending ORDER BY run_id LIMIT 1;
+    SELECT * FROM pending_runs ORDER BY run_id LIMIT 1;
     """)
     row = cursor.fetchone()
     if row is None:
@@ -165,16 +165,16 @@ async def get_top_run_set_machine_id(machine_id: str):
         run_id=row[0],
         config_id=row[1],
         machine_id=machine_id,
-        repetitions=row[5],
-        hyperparameter=row[3],
-        value=row[4],
+        repetitions=row[3],
+        hyperparameter=row[4],
+        value=row[5],
     )
 
     time = datetime.now()
 
     ## update the field
     cursor.execute("""
-    UPDATE pending_runs SET machine_id=?,started_at=? WHERE run_id=?
+    UPDATE pending_runs SET machine_id=? WHERE run_id=?
     """, (machine_id, run.run_id))
     db_connection.commit()
 
