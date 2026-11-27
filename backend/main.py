@@ -2,6 +2,7 @@ import json
 import os
 import logging
 import sqlite3 as sql
+import uuid 
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -11,6 +12,7 @@ from pathlib import Path
 DATABASE_NAME = "database/runs.db"
 SCHEMA_NAME = "database/squema.sql"
 UPLOAD_DIR = "uploads"
+CONFIG_NAME = "experiment_config.json"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 logger = logging.getLogger(__name__)
@@ -40,7 +42,7 @@ class RunState:
     machine_id: str
     hyperparameter: str|None
     value: float|None
-    repetitions: int
+    repetition: int
     status: str = "pending"
 
 
@@ -59,6 +61,7 @@ async def lifespan(app: FastAPI):
     global db_connection, cursor
     logger.info("Starting server")
     try:
+        os.makedirs(os.path.dirname(DATABASE_NAME), exist_ok=True)
         is_new = not os.path.exists(DATABASE_NAME)
         db_connection = sql.connect(DATABASE_NAME)
         cursor = db_connection.cursor()
@@ -66,8 +69,8 @@ async def lifespan(app: FastAPI):
             with open(SCHEMA_NAME) as f:
                 cursor.executescript(f.read())
         logger.info("Connected to database")
-        #TODO implement this
-        #scheduler.populatedb(cursor)
+        #generate and insert runs if database is empty
+        populate_pending_runs()
     except sql.OperationalError:
         logger.exception("Failed to connect to database")
 
@@ -165,7 +168,7 @@ async def get_top_run_set_machine_id(machine_id: str):
         run_id=row[0],
         config_id=row[1],
         machine_id=machine_id,
-        repetitions=row[3],
+        repetition=row[3],
         hyperparameter=row[4],
         value=row[5],
     )
@@ -198,3 +201,47 @@ async def move_to_table_by_run_id(run_id,from_table,to_table):
     DELETE FROM {from_table} WHERE run_id=?;
     """,(run_id,))
     db_connection.commit()
+
+def generate_configs(config):
+    baseline = config["baseline"]
+    hyperparameters = config["hyperparameters"]
+    #start with baseline config
+    configurations = [("baseline", "baseline", 0.0 )]
+
+    for parameter, values in hyperparameters.items():
+        for value in values:
+            #skip baseline since its already included
+            if value == baseline[parameter]:
+                continue
+            #rest of the configs
+            config_id = f"{parameter}_{value:g}"
+            configurations.append((config_id, parameter, value))
+    return configurations
+
+def populate_pending_runs():
+    #read experiment configs
+    with open(CONFIG_NAME, "r", encoding='utf-8') as config_file:
+        experiment_config=json.load(config_file)
+
+    configurations = generate_configs(experiment_config)
+    repetitions = experiment_config["repetitions"]
+    cursor.execute("SELECT COUNT(*) FROM all_runs")
+    existing_runs = cursor.fetchone()[0]
+    if existing_runs>0:
+        logger.info("Runs already exist. Skipping populations")
+        return
+    runs=[]
+    for config_id, hyperparameter, value in configurations:
+        for repetition in range(1, repetitions+1):
+            run_id = str(uuid.uuid4())
+            runs.append((run_id, config_id, None, repetition, hyperparameter, value))
+
+    #insert into table
+    cursor.executemany("""
+        INSERT INTO pending_runs (
+            run_id, config_id, machine_id, repetition, hyperparameter, value
+        ) VALUES (?, ?, ?, ?, ?, ?)""", runs)
+    db_connection.commit()
+    logger.info(f"Generated {len(configurations)} configurations")
+    logger.info(f"Inserted {len(runs)} pending runs")
+
