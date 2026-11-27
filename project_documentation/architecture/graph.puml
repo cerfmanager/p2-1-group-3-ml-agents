@@ -1,0 +1,73 @@
+@startuml
+
+' Roles 
+!$OWNER_GUI       = "G"
+!$OWNER_SERVER    = "S"
+!$OWNER_CSV       = "O"
+!$OWNER_SCHEDULER = "H"
+!$OWNER_MACHINES  = "C"
+
+' Role text style 
+!function $owner($name)
+  !return "<font:Courier><size:11><color:#B00020>assigned: " + $name + "</color></size></font>"
+!endfunction
+
+' Diagram 
+title System Architecture
+skinparam style strictuml
+skinparam nodesep 90
+skinparam ranksep 80
+
+' GUI node
+node GUI [
+  **GUI**
+  <size:11><i>«web server / local»</i></size>
+  ----
+  - displays data
+  ----
+  $owner($OWNER_GUI)
+]
+
+' Main server node
+node S [
+  **Main server**
+  <size:11><i>«Linux, school VM»</i></size>
+  ----
+  - runs
+  - completed?
+  ----
+  Results: CSV (big)
+  ----
+  $owner($OWNER_SERVER)
+]
+
+' Scheduler node
+node H [
+  **Scheduler**
+  ----
+  - schedules runs
+    based on info 
+  ----
+  $owner($OWNER_SCHEDULER)
+]
+
+' Our machines node
+node C [
+  **Our machines**
+  <size:11><i>«worker»</i></size>
+  ----
+  - YAML locally
+  - run the sumulation
+  - send data to server /
+    create CSV (small)
+  ----
+  $owner($OWNER_MACHINES)
+]
+
+' Relationships between nodes
+GUI .down.> S : runs data
+S -right- H : Python functions/methods
+H .left.> S : completed?
+C -up-> H : request runs
+C .up.> S : update CSV
+@enduml
